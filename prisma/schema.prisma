@@ -1,0 +1,29 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+model ImageMonitor {
+  id           Int     @id @default(autoincrement())
+  guild        BigInt
+  from_channel BigInt  @unique
+  to_channel   BigInt
+  success_msg  String? @default("Image moved successfully")
+  limit        Int     @default(1)
+
+  @@index([guild])
+}
+
+model GuildConfig {
+  id        Int     @id @default(autoincrement())
+  guild     BigInt  @unique
+  guild_log BigInt?
+  time_zone String? @default("UTC")
+
+  @@index([guild])
+}

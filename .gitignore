@@ -1,0 +1,10 @@
+.vscode
+!.vscode/extensions.json
+.env
+*.log
+*.log.*
+*.json
+!*.json.example
+__pycache__/
+upgradeRequest
+imgs/
