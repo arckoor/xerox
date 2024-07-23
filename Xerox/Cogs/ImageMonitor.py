@@ -1,3 +1,5 @@
+import os
+import uuid
 import pathlib
 
 import disnake # noqa
@@ -202,13 +204,36 @@ class ImageMonitor(BaseCog):
                 f"Failed to find channel {monitor.to_channel} in guild {message.guild.id}."
             )
             return
+        sent_attachments = 0
         for attachment in message.attachments:
-            if not attachment.content_type.startswith("image"):
+            if not attachment.content_type or not attachment.content_type.startswith("image"):
                 continue
-            await attachment.save(f"imgs/{attachment.filename}")
-            with open(f"imgs/{attachment.filename}", "rb") as f:
+            cnt = 0
+            _, ext = os.path.splitext(attachment.filename)
+            if not ext:
+                await Logging.guild_log(
+                    message.guild.id,
+                    f"Failed to save image attachment `{attachment.filename}` from {message.author.name} (`{message.author.id}`) in {message.channel.mention} due to missing extension."
+                    )
+                Logging.error(f"Failed to save image attachment {attachment.filename} from {message.author.name} ({message.author.id}) in {message.channel.id} due to missing extension.")
+                return
+
+            file_name = self.generate_filename(ext)
+            while self.image_exists(file_name):
+                cnt += 1
+                file_name = self.generate_filename(ext)
+                if cnt > 100:
+                    await Logging.guild_log(
+                        message.guild.id,
+                        f"Failed to save image attachment `{attachment.filename}` from {message.author.name} (`{message.author.id}`) in {message.channel.mention}`."
+                    )
+                    Logging.error(f"Failed to save image attachment {attachment.filename} from {message.author.name} ({message.author.id}) in {message.channel.id}.")
+                    return
+
+            await attachment.save(f"imgs/{file_name}")
+            with open(f"imgs/{file_name}", "rb") as f:
                 msg = await to_channel.send(
-                    file=disnake.File(f, attachment.filename),
+                    file=disnake.File(f, file_name, spoiler=False),
                     content=f"Sent by {message.author.mention} in {message.channel.mention}. Original message:\n`{message.content if message.content else 'No message content'}`"
                 )
                 Logging.info(f"An image sent by {message.author.name} ({message.author.id}) in {message.channel.id} has been redirected to {monitor.to_channel}.")
@@ -216,12 +241,21 @@ class ImageMonitor(BaseCog):
                     message.guild.id,
                     f"An image sent by {message.author.mention} (`{message.author.id}`) in {message.channel.mention} has been redirected to {to_channel.mention} : {msg.jump_url}."
                 )
-            pathlib.Path(f"imgs/{attachment.filename}").unlink(missing_ok=True)
+            pathlib.Path(f"imgs/{file_name}").unlink(missing_ok=True)
+            sent_attachments += 1
+        if sent_attachments == 0:
+            return
         await message.delete()
         if is_backlog:
             return
         success_msg = monitor.success_msg.replace("{{user}}", message.author.mention)
         await message.channel.send(success_msg)
+
+    def image_exists(self, filename: str):
+        return pathlib.Path(f"imgs/{filename}").exists()
+
+    def generate_filename(self, ext: str):
+        return f"{uuid.uuid4()}{ext}"
 
 
 def setup(bot: commands.Bot):
