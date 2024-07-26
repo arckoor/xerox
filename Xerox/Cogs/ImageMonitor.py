@@ -178,13 +178,16 @@ class ImageMonitor(BaseCog):
             return
 
         thinking_id = await inter.response.defer(with_message=True)
-        total_parsed = 0
+        parsed_messages = 0
+        parsed_images = 0
         async for message in from_channel.history(limit=limit):
-            total_parsed += 1
+            parsed_messages += 1
             if message.id in ignore_list:
                 continue
-            await self.parse_message(message, monitor, True)
-        reply = f"Processed and redirected {total_parsed} images."
+            res = await self.parse_message(message, monitor, True)
+            if res:
+                parsed_images += res
+        reply = f"Processed {parsed_messages} messages and redirected {parsed_images} images."
         if not inter.is_expired():
             await inter.followup.send(content=reply)
         else:
@@ -273,7 +276,7 @@ class ImageMonitor(BaseCog):
             return
         await message.delete()
         if is_backlog:
-            return
+            return sent_attachments
         success_msg = monitor.success_msg.replace("{{user}}", message.author.mention)
         await message.channel.send(success_msg)
 
