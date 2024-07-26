@@ -7,6 +7,8 @@ from Util import Configuration, Logging
 emojis = dict()
 
 BACKUPS = {
+    "IMG": "📷",
+    "WARN": "⚠",
 }
 
 

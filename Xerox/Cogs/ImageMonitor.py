@@ -10,6 +10,7 @@ from Cogs.BaseCog import BaseCog
 from Database.DBConnector import db
 from prisma.models import ImageMonitor as ImageMonitorModel
 from Util import Logging, Utils
+from Util.Emoji import msg_with_emoji
 from Views import Embed
 
 
@@ -98,7 +99,10 @@ class ImageMonitor(BaseCog):
             }
         )
 
-        await Logging.guild_log(inter.guild_id, f"A new ImageMonitor entry has been added by {inter.user.name} (`{inter.user.id}`) for {from_channel.mention} to {to_channel.mention}.")
+        await Logging.guild_log(
+            inter.guild_id,
+            msg_with_emoji("IMG", f"A new ImageMonitor entry has been added by {inter.user.name} (`{inter.user.id}`) for {from_channel.mention} to {to_channel.mention}.")
+            )
         await inter.response.send_message(f"Added {from_channel.mention} to the watchlist. Images will be redirected to {to_channel.mention}.")
 
     @img_mon.sub_command(name="remove", description="Remove a channel from the watchlist.")
@@ -120,7 +124,10 @@ class ImageMonitor(BaseCog):
                 "id": id
             }
         )
-        await Logging.guild_log(inter.guild_id, f"An ImageMonitor entry from `{monitor.from_channel}` to `{monitor.to_channel}` has been removed by {inter.user.name} (`{inter.user.id}`).")
+        await Logging.guild_log(
+            inter.guild_id,
+            msg_with_emoji("IMG", f"An ImageMonitor entry from `{monitor.from_channel}` to `{monitor.to_channel}` has been removed by {inter.user.name} (`{inter.user.id}`).")
+        )
         await inter.response.send_message("Entry removed.")
 
     @img_mon.sub_command(name="parse-backlog", description="Parse messages sent that the bot didn't catch.")
@@ -129,7 +136,8 @@ class ImageMonitor(BaseCog):
         self,
         inter: ApplicationCommandInteraction,
         id: int = commands.Param(description="The ID of the watchlist entry to parse messages for.", default=None),
-        limit: int = commands.Param(description="The maximum number of messages to parse.", default=100, ge=1, le=1000)
+        limit: int = commands.Param(description="The maximum number of messages to parse.", default=100, ge=1, le=1000),
+        ignore: str = commands.Param(description="Ignore these messages IDs, separated by commas.", default="")
     ):
         if not id:
             monitor = await db.imagemonitor.find_unique(
@@ -150,6 +158,16 @@ class ImageMonitor(BaseCog):
             if not monitor:
                 await inter.response.send_message("No entry found with that ID.", ephemeral=True)
                 return
+
+        if ignore:
+            try:
+                ignore = ignore.replace(" ", "")
+                ignore = ignore.split(",")
+                ignore_list = [int(i) for i in ignore]
+            except Exception as e:
+                await inter.response.send_message(f"Failed to parse ignore list: {e}", ephemeral=True)
+                return
+
         from_channel = self.bot.get_channel(monitor.from_channel)
         if not from_channel:
             await inter.response.send_message("Failed to find the input channel.", ephemeral=True)
@@ -162,8 +180,10 @@ class ImageMonitor(BaseCog):
         thinking_id = await inter.response.defer(with_message=True)
         total_parsed = 0
         async for message in from_channel.history(limit=limit):
-            await self.parse_message(message, monitor, True)
             total_parsed += 1
+            if message.id in ignore_list:
+                continue
+            await self.parse_message(message, monitor, True)
         reply = f"Processed and redirected {total_parsed} images."
         if not inter.is_expired():
             await inter.followup.send(content=reply)
@@ -201,7 +221,7 @@ class ImageMonitor(BaseCog):
             await Logging.error(f"Failed to find channel {monitor.to_channel} in guild {message.guild.id}.")
             await Logging.guild_log(
                 message.guild.id,
-                f"Failed to find channel {monitor.to_channel} in guild {message.guild.id}."
+                msg_with_emoji("WARN", f"Failed to find channel {monitor.to_channel} in guild {message.guild.id}.")
             )
             return
         sent_attachments = 0
@@ -213,8 +233,11 @@ class ImageMonitor(BaseCog):
             if not ext:
                 await Logging.guild_log(
                     message.guild.id,
-                    f"Failed to save image attachment `{attachment.filename}` from {message.author.name} (`{message.author.id}`) in {message.channel.mention} due to missing extension."
+                    msg_with_emoji(
+                        "WARN",
+                        f"Failed to save image attachment `{attachment.filename}` from {message.author.name} (`{message.author.id}`) in {message.channel.mention} due to missing extension."
                     )
+                )
                 Logging.error(f"Failed to save image attachment {attachment.filename} from {message.author.name} ({message.author.id}) in {message.channel.id} due to missing extension.")
                 return
 
@@ -225,7 +248,7 @@ class ImageMonitor(BaseCog):
                 if cnt > 100:
                     await Logging.guild_log(
                         message.guild.id,
-                        f"Failed to save image attachment `{attachment.filename}` from {message.author.name} (`{message.author.id}`) in {message.channel.mention}`."
+                        msg_with_emoji("WARN", f"Failed to save image attachment `{attachment.filename}` from {message.author.name} (`{message.author.id}`) in {message.channel.mention}`.")
                     )
                     Logging.error(f"Failed to save image attachment {attachment.filename} from {message.author.name} ({message.author.id}) in {message.channel.id}.")
                     return
@@ -239,7 +262,10 @@ class ImageMonitor(BaseCog):
                 Logging.info(f"An image sent by {message.author.name} ({message.author.id}) in {message.channel.id} has been redirected to {monitor.to_channel}.")
                 await Logging.guild_log(
                     message.guild.id,
-                    f"An image sent by {message.author.mention} (`{message.author.id}`) in {message.channel.mention} has been redirected to {to_channel.mention} : {msg.jump_url}."
+                    msg_with_emoji(
+                        "IMG",
+                        f"An image sent by {message.author.mention} (`{message.author.id}`) in {message.channel.mention} has been redirected to {to_channel.mention} : {msg.jump_url}."
+                    )
                 )
             pathlib.Path(f"imgs/{file_name}").unlink(missing_ok=True)
             sent_attachments += 1
