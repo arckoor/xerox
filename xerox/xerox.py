@@ -4,7 +4,7 @@ import asyncio
 import disnake  # noqa
 from disnake import Intents
 
-from Bot.Xerox import Xerox
+from Bot.xerox import xerox
 from Database import DBConnector
 from Util import Configuration, Logging
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         "intents": intents,
     }
 
-    xerox = Xerox(**args)
+    xerox = xerox(**args)
     xerox.run(Configuration.get_master_var("BOT_TOKEN", ""))
 
     try:

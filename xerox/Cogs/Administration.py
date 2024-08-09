@@ -44,17 +44,6 @@ class Administration(BaseCog):
         await inter.response.send_message("Shutting down.", ephemeral=True)
         await self.bot.close()
 
-    @commands.slash_command(description="Upgrade the bot.", guild_ids=[Configuration.get_master_var("ADMIN_GUILD", 0)])
-    @commands.is_owner()
-    @commands.default_member_permissions(administrator=True)
-    async def upgrade(self, inter: ApplicationCommandInteraction):
-        file = open("upgradeRequest", "w")
-        file.close()
-        Logging.info(f"Upgrade requested by {inter.author.name}.")
-        await Logging.bot_log(f"Upgrade requested by {inter.author.name}.")
-        await inter.response.send_message("Upgrading.", ephemeral=True)
-        await self.bot.close()
-
     @commands.slash_command(description="Cog management.", guild_ids=[Configuration.get_master_var("ADMIN_GUILD", 0)])
     @commands.is_owner()
     @commands.default_member_permissions(administrator=True)
