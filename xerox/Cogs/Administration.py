@@ -7,6 +7,7 @@ from disnake import ApplicationCommandInteraction
 from disnake.ext import commands
 
 from Cogs.BaseCog import BaseCog
+from Database.DBConnector import db  # noqa
 from Util import Configuration, Logging
 
 

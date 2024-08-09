@@ -115,7 +115,7 @@ class ImageMonitor(BaseCog):
                 "id": id
             }
         )
-        if not monitor:
+        if not monitor or monitor.guild != inter.guild_id:
             await inter.response.send_message("No entry found with that ID.", ephemeral=True)
             return
 
@@ -155,7 +155,7 @@ class ImageMonitor(BaseCog):
                     "id": id
                 }
             )
-            if not monitor:
+            if not monitor or monitor.guild != inter.guild_id:
                 await inter.response.send_message("No entry found with that ID.", ephemeral=True)
                 return
 
