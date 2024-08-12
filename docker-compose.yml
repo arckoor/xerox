@@ -3,7 +3,7 @@ services:
     image: ghcr.io/arckoor/xerox:latest
     build: .
     container_name: xerox
-    restart: always
+    restart: unless-stopped
     environment:
       - PYTHONPATH=${PYTHONPATH}
       - DATABASE_URL=postgresql://xerox:${PG_PASSWORD}@db:5432/xerox-db
@@ -19,7 +19,7 @@ services:
   db:
     image: postgres:16
     container_name: xerox-db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: xerox
       POSTGRES_PASSWORD: ${PG_PASSWORD}

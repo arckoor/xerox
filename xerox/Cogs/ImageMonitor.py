@@ -105,6 +105,70 @@ class ImageMonitor(BaseCog):
             )
         await inter.response.send_message(f"Added {from_channel.mention} to the watchlist. Images will be redirected to {to_channel.mention}.")
 
+    @img_mon.sub_command(name="edit", description="Edit a watchlist entry.")
+    async def edit(
+        self,
+        inter: ApplicationCommandInteraction,
+        id: int = commands.Param(description="The ID of the watchlist entry to edit."),
+        new_from_channel: disnake.TextChannel | None = commands.Param(name="new-from-channel", description="The new channel to watch.", default=None),
+        new_to_channel: disnake.TextChannel | None = commands.Param(name="new-to-channel", description="The new channel to send the alert.", default=None),
+        new_success_msg: str = commands.Param(name="new-success-msg", description="The new message to send in the from-channel when an image is redirected.", default=None),
+        new_limit: int = commands.Param(name="new-limit", description="The new maximum number of images that can be sent at once.", default=None)
+    ):
+        monitor = await db.imagemonitor.find_unique(
+            where={
+                "id": id
+            }
+        )
+        if not monitor or monitor.guild != inter.guild_id:
+            await inter.response.send_message("No entry found with that ID.", ephemeral=True)
+            return
+
+        if not new_from_channel and not new_to_channel and not new_success_msg and not new_limit:
+            await inter.response.send_message("You must specify at least one field to edit.", ephemeral=True)
+            return
+
+        if not new_from_channel:
+            new_from_channel = self.bot.get_channel(monitor.from_channel)
+        if not new_to_channel:
+            new_to_channel = self.bot.get_channel(monitor.to_channel)
+        if not new_from_channel or not new_to_channel:
+            await inter.response.send_message("Failed to find the input or output channel. Please reassign them.", ephemeral=True)
+            return
+        if not new_success_msg:
+            new_success_msg = monitor.success_msg
+        if not new_limit:
+            new_limit = monitor.limit
+
+        if (new_from_channel and new_from_channel.guild.id != inter.guild_id) or (new_to_channel and new_to_channel.guild.id != inter.guild_id):
+            await inter.response.send_message("The channel(s) must be in this guild.", ephemeral=True)
+            return
+        if new_from_channel == new_to_channel:
+            await inter.response.send_message("The new channels must be different.", ephemeral=True)
+            return
+
+        if new_success_msg:
+            new_success_msg = new_success_msg.replace("\\n", "\n")
+
+        update_data = {}
+        update_data["from_channel"] = new_from_channel.id
+        update_data["to_channel"] = new_to_channel.id
+        update_data["success_msg"] = new_success_msg
+        update_data["limit"] = new_limit
+
+        await db.imagemonitor.update(
+            where={
+                "id": id
+            },
+            data=update_data
+        )
+
+        await Logging.guild_log(
+            inter.guild_id,
+            msg_with_emoji("IMG", f"An ImageMonitor entry from {new_from_channel.mention} to {new_to_channel.mention} has been edited by {inter.user.name} (`{inter.user.id}`).")
+        )
+        await inter.response.send_message("Entry edited.")
+
     @img_mon.sub_command(name="remove", description="Remove a channel from the watchlist.")
     async def remove(
         inter: ApplicationCommandInteraction,

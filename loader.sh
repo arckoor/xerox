@@ -8,6 +8,4 @@ else
 	prisma migrate deploy
 fi
 
-prisma generate
-
 exec "$@"
