@@ -68,7 +68,8 @@ class ImageMonitor(BaseCog):
             to_channel: disnake.abc.GuildChannel = Utils.coalesce(self.bot.get_channel(monitor.to_channel), Utils.get_alternate_channel(monitor.to_channel))
             embed.add_field(
                 name=f"From {from_channel.mention} | ID: {monitor.id}",
-                value=f"To {to_channel.mention}"
+                value=f"To {to_channel.mention}",
+                inline=False
             )
         await inter.response.send_message(embed=embed)
 
